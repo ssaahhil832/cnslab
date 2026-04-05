@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diffie-Hellman Key Exchange</title>
+  <style>
+    :root {
+      --bg1: #f2e9dc;
+      --bg2: #dfe9f3;
+      --ink: #1c1c1c;
+      --accent: #c05a2b;
+      --card: #fff7ee;
+      --shadow: rgba(0, 0, 0, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      color: var(--ink);
+      background: radial-gradient(1200px 600px at 10% 0%, var(--bg2), transparent),
+                  linear-gradient(135deg, var(--bg1), #f7f3ec 60%, #e9f0f7 100%);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .panel {
+      width: min(980px, 100%);
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 18px 50px var(--shadow);
+      padding: 28px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      animation: rise 500ms ease-out both;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(8px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: #4a4a4a;
+      font-size: 0.98rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    label {
+      display: block;
+      font-size: 0.92rem;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cfc2b1;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: #fffdf9;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 8px 18px rgba(192, 90, 43, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px dashed #d2b8a7;
+      min-height: 96px;
+      animation: reveal 400ms ease-out both;
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .note {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #5a5a5a;
+    }
+
+    .mono {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Diffie-Hellman Key Exchange</h1>
+    <p class="subtitle">Use small demo values or set your own. All calculations use JavaScript BigInt.</p>
+
+    <div class="grid">
+      <div>
+        <label for="prime">Prime (p)</label>
+        <input id="prime" value="23" />
+      </div>
+      <div>
+        <label for="generator">Generator (g)</label>
+        <input id="generator" value="5" />
+      </div>
+      <div>
+        <label for="alice">Alice private (a)</label>
+        <input id="alice" value="6" />
+      </div>
+      <div>
+        <label for="bob">Bob private (b)</label>
+        <input id="bob" value="15" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="compute">Compute Keys</button>
+      <button id="reset" type="button">Reset Demo Values</button>
+    </div>
+
+    <div id="output" class="result">
+      <div class="mono">Shared secrets will appear here.</div>
+    </div>
+
+    <div class="note">Note: This is a learning demo. Use strong primes and safe parameters in real systems.</div>
+  </div>
+
+  <script>
+    function toBigInt(value) {
+      if (value.trim() === "") {
+        throw new Error("All inputs are required.");
+      }
+      return BigInt(value);
+    }
+
+    function modPow(base, exp, mod) {
+      let result = 1n;
+      let b = base % mod;
+      let e = exp;
+
+      while (e > 0n) {
+        if (e % 2n === 1n) {
+          result = (result * b) % mod;
+        }
+        b = (b * b) % mod;
+        e = e / 2n;
+      }
+      return result;
+    }
+
+    function compute() {
+      const output = document.getElementById("output");
+      try {
+        const p = toBigInt(document.getElementById("prime").value);
+        const g = toBigInt(document.getElementById("generator").value);
+        const a = toBigInt(document.getElementById("alice").value);
+        const b = toBigInt(document.getElementById("bob").value);
+
+        if (p <= 2n) {
+          throw new Error("Prime must be greater than 2.");
+        }
+
+        const A = modPow(g, a, p);
+        const B = modPow(g, b, p);
+        const sharedAlice = modPow(B, a, p);
+        const sharedBob = modPow(A, b, p);
+
+        output.innerHTML = "" +
+          "<div class=\"mono\">Alice public A = g^a mod p = " + A + "</div>" +
+          "<div class=\"mono\">Bob public B = g^b mod p = " + B + "</div>" +
+          "<div class=\"mono\">Shared (Alice) = " + sharedAlice + "</div>" +
+          "<div class=\"mono\">Shared (Bob) = " + sharedBob + "</div>";
+      } catch (err) {
+        output.innerHTML = "<div class=\"mono\">Error: " + err.message + "</div>";
+      }
+    }
+
+    function resetValues() {
+      document.getElementById("prime").value = "23";
+      document.getElementById("generator").value = "5";
+      document.getElementById("alice").value = "6";
+      document.getElementById("bob").value = "15";
+      compute();
+    }
+
+    document.getElementById("compute").addEventListener("click", compute);
+    document.getElementById("reset").addEventListener("click", resetValues);
+    compute();
+  </script>
+</body>
+</html>
